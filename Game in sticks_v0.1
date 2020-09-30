@@ -1,0 +1,25 @@
+sticks = 10
+print ('Game STICKS')
+
+while sticks <= 10:
+    player1 = int(input('P1 Number of sticks you want to take: '))
+    if player1 < 1 or player1 > 3:
+        print(f'You tried to take {player1} sticks. Allowed to take between 1 and 3 sticks')
+    else:
+        sticks -= player1
+    if sticks <= 0:
+            print('P2 won. Sticks have not left')
+            break
+    else:
+            print(f'Left sticks: {sticks}')
+
+    player2 = int(input('P2 Number of sticks you want to take: '))
+    if player2 < 1 or player2 > 3:
+        print(f'You tried to take {player2} sticks. Allowed to take between 1 and 3 sticks')
+    else:
+        sticks -= player2
+    if sticks <= 0:
+            print('P1 won. Sticks have not left')
+            break
+    else:        
+        print(f'Left sticks: {sticks}')
