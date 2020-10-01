@@ -1,0 +1,10 @@
+romans = dict(I=1, V=5, X=10, L=50, C=100, D=500, M=1000)
+
+def parse_roman(roman):
+    result = 0
+    for k,v in enumerate(roman):
+        if k+1 < len(roman) and romans[v] < romans[roman[k+1]]:
+            result -= romans[v]
+        else:
+            result += romans[v]
+    return result
