@@ -1,30 +1,26 @@
-from hangman.game import Game
-from hangman.game_status import GameStatus
+from true_or_false.game import Game
+from true_or_false.game_result import GameResult
+from true_or_false.game_status import GameStatus
 
 
-def chars_list_to_str(chars):
-    return ''.join(chars)
+def end_of_game_handler(result: GameResult):
+    print(f"Questions asked:{result.questions_passed}. Mistakes made: {result.mistakes_made}.")
+    print(f"You won!" if result.won else "You lost!")
 
 
-game = Game()
-word = game.generate_word()
-
-letters_count = len(word)
-
-print(f'The word consists of {letters_count} letters.')
-print(f'Try to guess the word letter by letter.')
+game = Game("..\\true_or_false\\data\\Questions.csv", end_of_game_handler, allowed_mistakes=3)
 
 while game.game_status == GameStatus.IN_PROGRESS:
-    letter = input('Pick a letter.\n')
-    state = game.guess_letter(letter)
+    q = game.get_next_question()
+    print("Do you believe in the next statement? Enter 'y' or 'n'")
+    print(q.text)
 
-    print(chars_list_to_str(state))
+    answer = input() == "y"
 
-    print(f'Remaining tries = {game.remaining_tries}')
-    print(f'Tried letters: {chars_list_to_str(game.tried_letters)}')
+    if q.is_true == answer:
+        print("Good job! You're right")
+    else:
+        print("Oops, actually you're mistaken. Here is the explanation:")
+        print(q.explanation)
 
-if game.game_status == GameStatus.LOST:
-    print(f'You are hanged!')
-    print(f'The word was: {game.word}')
-else:
-    print('Congratulations! You won!')
+    game.give_answer(answer)

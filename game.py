@@ -1,99 +1,63 @@
-import random
-from typing import Iterable, List
+from typing import Callable, List
 
-from hangman.game_status import GameStatus
-from hangman.invalid_operation_error import InvalidOperationError
+from true_or_false.game_result import GameResult
+from true_or_false.game_status import GameStatus
+from true_or_false.question import Question
 
 
 class Game:
 
-    def __init__(self, allowed_misses: int = 6):
-        if allowed_misses < 5 or allowed_misses > 8:
-            raise ValueError("Number of allowed misses should be between 5 and 8")
+    def __init__(self, file_path: str, end_of_game_event: Callable, allowed_mistakes: int):
 
-        self.__allowed_misses = allowed_misses
-        self.__tries_counter = 0
-        self.__tried_letters = []
-        self.__open_indexes = []
-        self.__game_status = GameStatus.NOT_STARTED
-        self.__word = ''
+        if allowed_mistakes > 5 or allowed_mistakes < 1:
+            raise ValueError(f"Allowed mistakes should be between 1 and 5. You passed {allowed_mistakes}")
 
-    def generate_word(self) -> str:
-        filename = "data\\WordsStockRus.txt"
-
-        words = []
-        with open(filename, encoding='utf8') as file:
-            for line in file:
-                words.append(line.strip('\n'))
-
-        rand_index = random.randint(0, len(words) - 1)
-
-        self.__word = words[rand_index]
-
-        self.__open_indexes = [False for _ in self.__word]
+        self.__file_path = file_path
+        self.__allowed_mistakes = allowed_mistakes
+        self.__end_of_game_event = end_of_game_event
+        self.__mistakes = 0
+        self.__questions: List[Question] = []
+        self.__counter = 0
         self.__game_status = GameStatus.IN_PROGRESS
 
-        return self.__word
+        self.__fill_in_questions(file_path, self.__questions)
 
-    def guess_letter(self, letter: str) -> Iterable[str]:
-        if self.tries_counter == self.allowed_misses:
-            raise InvalidOperationError(f'Exceeded the max misses number. Allowed {self.allowed_misses}')
+    def get_next_question(self) -> Question:
+        return self.__questions[self.__counter]
 
-        if self.game_status != GameStatus.IN_PROGRESS:
-            raise InvalidOperationError(f'Inappropriate status of game: {self.game_status}')
+    def is_last_question(self):
+        return self.__counter == len(self.__questions) - 1
 
-        open_any = False
-        result: List[str] = []
+    def give_answer(self, answer: bool):
 
-        for i in range(len(self.word)):
-            cur_letter = self.word[i]
-            if cur_letter == letter:
-                self.__open_indexes[i] = True
-                open_any = True
+        def exceeded_allowed_mistakes():
+            return self.__mistakes > self.__allowed_mistakes
 
-            if self.__open_indexes[i]:
-                result.append(cur_letter)
-            else:
-                result.append('-')
+        if self.__questions[self.__counter].is_true != answer:
+            self.__mistakes += 1
 
-        if not open_any:
-            self.__tries_counter += 1
+        if self.is_last_question() or exceeded_allowed_mistakes():
+            self.__game_status = GameStatus.GAME_IS_OVER
 
-        self.__tried_letters.append(letter)
+            result = GameResult(self.__counter, self.__mistakes, self.__mistakes <= self.__allowed_mistakes)
+            self.__end_of_game_event(result)
 
-        if self.__is_winning():
-            self.__game_status = GameStatus.WON
-        elif self.tries_counter == self.allowed_misses:
-            self.__game_status = GameStatus.LOST
-
-        return result
-
-    def __is_winning(self):
-        for cur in self.__open_indexes:
-            if not cur:
-                return False
-        return True
+        self.__counter += 1
 
     @property
-    def game_status(self) -> GameStatus:
+    def game_status(self):
         return self.__game_status
 
-    @property
-    def word(self) -> str:
-        return self.__word
+    def __fill_in_questions(self, file_path, questions):
+        with open(file_path, encoding='utf8') as file:
+            for line in file:
+                q = self.__parse_line(line)
+                questions.append(q)
 
-    @property
-    def allowed_misses(self) -> int:
-        return self.__allowed_misses
+    def __parse_line(self, line) -> Question:
+        parts = line.split(';')
+        text = parts[0]
+        is_correct = parts[1] == 'Yes'
+        explanation = parts[2]
 
-    @property
-    def tries_counter(self) -> int:
-        return self.__tries_counter
-
-    @property
-    def tried_letters(self) -> Iterable[str]:
-        return sorted(self.__tried_letters)
-
-    @property
-    def remaining_tries(self) -> int:
-        return self.allowed_misses - self.tries_counter
+        return Question(text, is_correct, explanation)
